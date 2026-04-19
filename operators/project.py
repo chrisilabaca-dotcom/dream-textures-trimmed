@@ -384,7 +384,12 @@ class ProjectDreamTexture(bpy.types.Operator):
                 context.scene.dream_textures_info = ""
                 context.scene.dream_textures_progress = 0
                 if not isinstance(results, InterruptedError): # this is a user-initiated cancellation
-                    eval('bpy.ops.' + NotifyResult.bl_idname)('INVOKE_DEFAULT', exception=repr(results))
+                    # Frank-strip: replaced eval() with explicit getattr chain
+                    op_path = NotifyResult.bl_idname.split('.')
+                    op_obj = bpy.ops
+                    for part in op_path:
+                        op_obj = getattr(op_obj, part)
+                    op_obj('INVOKE_DEFAULT', exception=repr(results))
                 raise results
             else:
                 nonlocal texture

@@ -125,7 +125,12 @@ class DreamTexture(bpy.types.Operator):
                     scene.dream_textures_progress = 0
                     CancelGenerator.should_continue = None
                     if not isinstance(results, InterruptedError): # this is a user-initiated cancellation
-                        eval('bpy.ops.' + NotifyResult.bl_idname)('INVOKE_DEFAULT', exception=repr(results))
+                        # Frank-strip: replaced eval() with explicit getattr chain for security
+                        op_path = NotifyResult.bl_idname.split('.')
+                        op_obj = bpy.ops
+                        for part in op_path:
+                            op_obj = getattr(op_obj, part)
+                        op_obj('INVOKE_DEFAULT', exception=repr(results))
                     raise results
                 else:
                     nonlocal last_data_block

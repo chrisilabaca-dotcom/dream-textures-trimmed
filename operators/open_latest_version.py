@@ -8,13 +8,10 @@ REPO_NAME = "dream-textures"
 
 latest_version = VERSION
 def check_for_updates():
-    try:
-        global latest_version
-        response = requests.get(f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases")
-        releases = response.json()
-        latest_version = version_tuple(releases[0]['tag_name'])
-    except:
-        pass
+    # Frank-strip: telemetry to api.github.com disabled. This addon should not phone home.
+    # Original behaviour: GET api.github.com/repos/carson-katri/dream-textures/releases on every startup.
+    # Replaced with no-op. If Chris wants to check for updates, do it manually.
+    return
 
 def new_version_available():
     return not latest_version == VERSION

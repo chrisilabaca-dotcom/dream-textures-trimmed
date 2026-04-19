@@ -160,6 +160,17 @@ def hf_snapshot_download(
     variant: str | None = None,
     resume_download=True
 ):
+    # Frank-strip: sandbox HF cache to ~/.dream-textures-trimmed/models/ + audit log every download
+    import os, datetime
+    sandbox_dir = os.path.expanduser("~/.dream-textures-trimmed/models")
+    os.makedirs(sandbox_dir, exist_ok=True)
+    os.environ["HF_HOME"] = os.path.expanduser("~/.dream-textures-trimmed")
+    os.environ["HUGGINGFACE_HUB_CACHE"] = sandbox_dir
+    log_path = os.path.expanduser("~/.dream-textures-trimmed/download.log")
+    with open(log_path, "a") as log_f:
+        log_f.write(f"{datetime.datetime.utcnow().isoformat()}Z DOWNLOAD_START model={model} variant={variant}\n")
+    print(f"[dream-textures-trimmed] DOWNLOADING model={model} variant={variant} -> {sandbox_dir}")
+
     from huggingface_hub import snapshot_download, repo_info
     from diffusers import StableDiffusionPipeline
     from diffusers.pipelines.pipeline_utils import variant_compatible_siblings
@@ -170,6 +181,15 @@ def hf_snapshot_download(
 
     info = repo_info(model, token=token)
     files = [file.rfilename for file in info.siblings]
+
+    # Audit total size before committing to download
+    total_bytes = sum((getattr(f, "size", 0) or 0) for f in info.siblings)
+    total_gb = total_bytes / (1024**3)
+    print(f"[dream-textures-trimmed] model total size: {total_gb:.2f} GB ({len(files)} files)")
+    with open(log_path, "a") as log_f:
+        log_f.write(f"  model_total_gb={total_gb:.2f} file_count={len(files)}\n")
+    if total_gb > 10:
+        raise RuntimeError(f"dream-textures-trimmed: model {model} is {total_gb:.2f} GB, exceeds 10GB cap. Halt per security policy.")
 
     if "model_index.json" in files:
         # check if the variant files are available before trying to download them
